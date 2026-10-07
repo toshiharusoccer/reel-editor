@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#111318">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="リール編集">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>リール編集ツール</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <h1>🎬 リール編集ツール</h1>
+  <p class="sub">複数クリップを結合してBGMをつけ、20〜30秒のリールを作る</p>
+</header>
+
+<main>
+
+  <section class="card" id="step-add">
+    <h2>1. 動画を選ぶ</h2>
+    <label class="btn primary" for="videoInput">📱 動画を追加（複数選択OK）</label>
+    <input type="file" id="videoInput" accept="video/*" multiple hidden>
+    <p class="hint">カメラロールから複数選べます。選んだ順に並びます（後で並び替え可）。</p>
+  </section>
+
+  <section class="card" id="step-clips" hidden>
+    <h2>2. トリミング・並べ替え</h2>
+    <p class="hint">各クリップの使う範囲（開始〜終了）を指定。▲▼で順番を変更できます。</p>
+    <div id="clipList"></div>
+    <div class="total-row">
+      <span>合計: <strong id="totalDuration">0.0</strong> 秒</span>
+      <span id="totalWarning" class="warning" hidden>⚠ 20〜30秒を目安に調整しましょう</span>
+    </div>
+  </section>
+
+  <section class="card" id="step-bgm" hidden>
+    <h2>3. BGM（任意）</h2>
+    <label class="btn secondary" for="bgmInput">🎵 BGMファイルを追加</label>
+    <input type="file" id="bgmInput" accept="audio/*" hidden>
+    <div id="bgmInfo" class="hint" hidden></div>
+
+    <div id="bgmControls" hidden>
+      <label class="slider-row">
+        元動画の音量
+        <input type="range" id="origVolume" min="0" max="100" value="100">
+        <span id="origVolumeVal">100%</span>
+      </label>
+      <label class="slider-row">
+        BGMの音量
+        <input type="range" id="bgmVolume" min="0" max="100" value="80">
+        <span id="bgmVolumeVal">80%</span>
+      </label>
+      <label class="check-row">
+        <input type="checkbox" id="bgmFade" checked>
+        BGMをフェードイン・フェードアウトする
+      </label>
+      <button class="btn text" id="removeBgm" type="button">BGMを削除</button>
+    </div>
+  </section>
+
+  <section class="card" id="step-build" hidden>
+    <h2>4. 書き出し</h2>
+    <button class="btn primary big" id="buildBtn" type="button">✨ 動画を作成する</button>
+    <div id="buildProgress" class="progress-wrap" hidden>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <p id="progressLabel" class="hint">準備中…</p>
+    </div>
+
+    <div id="resultBox" hidden>
+      <video id="resultVideo" controls playsinline></video>
+      <div class="result-actions">
+        <a id="downloadLink" class="btn primary" download="reel.mp4">⬇ 保存する</a>
+        <button class="btn secondary" id="shareBtn" type="button" hidden>📤 共有する</button>
+      </div>
+    </div>
+  </section>
+
+  <p class="footnote">※ 初回のみ動画処理エンジン（約30MB）のダウンロードが必要です。Wi-Fi推奨。処理はすべてこの端末の中だけで行われ、動画はどこにもアップロードされません。</p>
+
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

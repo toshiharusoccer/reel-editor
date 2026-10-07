@@ -43,28 +43,54 @@ function fmt(sec) {
   return Number.isFinite(sec) ? sec.toFixed(1) : "0.0";
 }
 
+// iOS Safari can fail to fire loadedmetadata/seeked on <video> elements that
+// are never attached to the document, so probe elements are mounted here
+// (off-screen but in-layout) instead of left detached.
+const probeHost = document.createElement("div");
+probeHost.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;";
+document.body.appendChild(probeHost);
+
+function withTimeout(promise, ms, message) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 function loadVideoMeta(file) {
-  return new Promise((resolve, reject) => {
+  const task = new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const v = document.createElement("video");
     v.preload = "metadata";
     v.muted = true;
     v.playsInline = true;
-    v.src = url;
+    v.setAttribute("playsinline", "");
+    probeHost.appendChild(v);
+    const cleanup = () => v.remove();
     v.onloadedmetadata = () => {
       resolve({ url, duration: v.duration, width: v.videoWidth, height: v.videoHeight });
+      cleanup();
     };
-    v.onerror = () => reject(new Error("動画の読み込みに失敗しました"));
+    v.onerror = () => {
+      cleanup();
+      reject(new Error("動画の読み込みに失敗しました"));
+    };
+    v.src = url;
+    v.load();
   });
+  return withTimeout(task, 15000, "動画の読み込みがタイムアウトしました");
 }
 
 function captureThumbnail(url, atTime = 0.1) {
-  return new Promise((resolve) => {
+  const task = new Promise((resolve) => {
     const v = document.createElement("video");
     v.preload = "metadata";
     v.muted = true;
     v.playsInline = true;
-    v.src = url;
+    v.setAttribute("playsinline", "");
+    probeHost.appendChild(v);
+    const cleanup = () => v.remove();
     v.addEventListener("loadeddata", () => {
       v.currentTime = Math.min(atTime, (v.duration || 1) - 0.05);
     });
@@ -81,14 +107,27 @@ function captureThumbnail(url, atTime = 0.1) {
         resolve(canvas.toDataURL("image/jpeg", 0.7));
       } catch {
         resolve(null);
+      } finally {
+        cleanup();
       }
     });
-    v.addEventListener("error", () => resolve(null));
+    v.addEventListener("error", () => {
+      cleanup();
+      resolve(null);
+    });
+    v.src = url;
+    v.load();
   });
+  return withTimeout(task, 15000, "サムネイル生成がタイムアウトしました").catch(() => null);
 }
 
 // ---------- clip management ----------
+const addVideoLabel = document.querySelector('label[for="videoInput"]');
+
 async function addFiles(fileList) {
+  const originalLabel = addVideoLabel.textContent;
+  addVideoLabel.textContent = "読み込み中…";
+  addVideoLabel.style.opacity = "0.6";
   for (const file of fileList) {
     try {
       const meta = await loadVideoMeta(file);
@@ -109,9 +148,11 @@ async function addFiles(fileList) {
         renderClips();
       });
     } catch (e) {
-      alert(`${file.name} を読み込めませんでした`);
+      alert(`${file.name} を読み込めませんでした\n${e.message || ""}`);
     }
   }
+  addVideoLabel.textContent = originalLabel;
+  addVideoLabel.style.opacity = "";
   renderClips();
   updateSectionVisibility();
 }
